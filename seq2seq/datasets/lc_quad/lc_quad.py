@@ -1,7 +1,14 @@
-import json
 import os
+import sys
+abs_path = os.path.abspath(sys.argv[0])
+dir_path = abs_path.replace("/seq2seq/datasets/lc_quad/lc_quad.py", "")
+sys.path.append(dir_path)
+
+
+import json
 import re
 import datasets
+from seq2seq.datasets.lc_quad.preprocess import Preprocess
 
 
 # TODO(lc_quad): BibTeX citation
@@ -22,7 +29,7 @@ LC-QuAD 2.0 is a Large Question Answering dataset with 30,000 pairs of question 
 _URL = "https://github.com/AskNowQA/LC-QuAD2.0/archive/master.zip"
 
 
-class LC_QuAD(datasets.GeneratorBasedBuilder):
+class LcQuad(datasets.GeneratorBasedBuilder):
     """TODO(lc_quad): Short description of my dataset."""
 
     # TODO(lc_quad): Set up version.
@@ -41,6 +48,8 @@ class LC_QuAD(datasets.GeneratorBasedBuilder):
                     "subgraph": datasets.Value("string"),
                     "template_index": datasets.Value("int32"),
                     "question": datasets.Value("string"),
+                    "question_input": datasets.Value("string"),
+                    "sparql_wiki_process": datasets.Value("string"),
                     "sparql_wikidata": datasets.Value("string"),
                     "sparql_dbpedia18": datasets.Value("string"),
                     "template": datasets.Value("string"),
@@ -63,7 +72,9 @@ class LC_QuAD(datasets.GeneratorBasedBuilder):
         # TODO(lc_quad): Downloads the data and defines the splits
         # dl_manager is a datasets.download.DownloadManager that can be used to
         # download and extract URLs
-        dl_dir = dl_manager.download_and_extract(_URL)
+        #dl_dir = dl_manager.download_and_extract(_URL)
+        #dl_dir = '/home/wlw2021/project/text2sparql/picard_preprocess/transform/transformers_cache_7.28/downloads'
+        dl_dir = './transform/transformers_cache/downloads'
         dl_dir = os.path.join(dl_dir, "LC-QuAD2.0-master", "dataset")
         return [
             datasets.SplitGenerator(
@@ -83,19 +94,24 @@ class LC_QuAD(datasets.GeneratorBasedBuilder):
         # TODO(lc_quad): Yields (key, example) tuples from the dataset
         with open(filepath, encoding="utf-8") as f:
             data = json.load(f)
+            pre = Preprocess()
+
             for id_, row in enumerate(data):
-                # is_list = False
-                # for key in row:
-                #     if key != "answer" and isinstance(row[key], list):
-                #         is_list = True
-                # if is_list:
-                #     continue
+                #is_list = False
+                #for key in row:
+                #    if key != "answer" and isinstance(row[key], list):
+                #        is_list = True
+                #if is_list:
+                 #   continue
+                gold_query, question_input = pre._preprocess(row)
                 yield id_, {
                     "NNQT_question": row["NNQT_question"],
                     "uid": row["uid"],
                     "subgraph": row["subgraph"],
                     "template_index": row["template_index"],
                     "question": row["question"],
+                    "question_input": question_input,
+                    "sparql_wiki_process": gold_query,
                     "sparql_wikidata": row["sparql_wikidata"],
                     "sparql_dbpedia18": row["sparql_dbpedia18"],
                     "template": row["template"],
