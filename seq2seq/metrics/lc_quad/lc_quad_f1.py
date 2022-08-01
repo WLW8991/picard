@@ -1,5 +1,6 @@
 import requests
 from typing import Dict, Any
+from seq2seq.metrics.lc_quad.post_process import process
 
 
 def empty(r):
@@ -50,9 +51,9 @@ def parse_answer_from_result(result_dict):
 
 
 def compute_prf1_one(prediction, reference):
-    gold_result = hitkg(reference)
+    gold_result = hitkg(process(reference))
     gold_answer = parse_answer_from_result(gold_result)
-    pred_result = hitkg(prediction)
+    pred_result = hitkg(process(prediction))
     pred_answer = parse_answer_from_result(pred_result)
     if gold_answer is None:
         if pred_answer is None:
