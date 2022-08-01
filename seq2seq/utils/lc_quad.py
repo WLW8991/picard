@@ -59,7 +59,7 @@ def lc_quad_pre_process_function(
     
     inputs = [
         lc_quad_get_input(question=question, prefix=prefix)
-        for question in batch["NNQT_question"]
+        for question in batch["question_input"]
     ]
 
     model_inputs: dict = tokenizer(
@@ -81,7 +81,7 @@ def lc_quad_pre_process_function(
     #    for query in batch["sparql_dbpedia18"]
     #]
 
-    targets = [ query for query in batch["sparql_dbpedia18"] ]
+    targets = [query for query in batch["sparql_wiki_process"] ]
 
     # Setup the tokenizer for targets
     with tokenizer.as_target_tokenizer():
@@ -102,28 +102,29 @@ class QuadTrainer(Seq2SeqTrainer):
     def _post_process_function(
         self, examples: Dataset, features: Dataset, predictions: np.ndarray, stage: str
     ) -> EvalPrediction:
-        inputs = self.tokenizer.batch_decode([f["input_ids"] for f in features], skip_special_tokens=True)
+
+        inputs = self.tokenizer.batch_decode([f["input_ids"] for f in features], skip_special_tokens=False)
         label_ids = [f["labels"] for f in features]
+
         if self.ignore_pad_token_for_loss:
             # Replace -100 in the labels as we can't decode them.
             _label_ids = np.where(label_ids != -100, label_ids, self.tokenizer.pad_token_id)
-        decoded_label_ids = self.tokenizer.batch_decode(_label_ids, skip_special_tokens=True)
+        decoded_label_ids = self.tokenizer.batch_decode(_label_ids, skip_special_tokens=False)
         metas = [
             {
-                #"query": x["query"],
-                "query": x["sparql_dbpedia18"],
-                "question": x["NNQT_question"],
-                "context": context,
-                "label": label,
-                #"db_id": x["db_id"],
-                #"db_path": x["db_path"],
-                #"db_table_names": x["db_table_names"],
-                #"db_column_names": x["db_column_names"],
-                #"db_foreign_keys": x["db_foreign_keys"],
+                "query": x["sparql_wiki_process"],
+                "question": x["question_input"],
+                "context": context.replace('<pad>','').replace('</s>','').replace('<unk>','')\
+                      .replace('<s>','').strip(),
+                "label": label.replace('<pad>','').replace('</s>','').replace('<unk>','')\
+                      .replace('<s>','').strip(),
             }
             for x, context, label in zip(examples, inputs, decoded_label_ids)
         ]
-        predictions = self.tokenizer.batch_decode(predictions, skip_special_tokens=True)
+        pred_res = self.tokenizer.batch_decode(predictions, skip_special_tokens=False)
+        predictions = [item.replace('<pad>','').replace('</s>','').replace('<unk>','')\
+                      .replace('<s>','').strip() for item in pred_res]
+                      
         assert len(metas) == len(predictions)
         with open(f"{self.args.output_dir}/predictions_{stage}.json", "w") as f:
             json.dump(
