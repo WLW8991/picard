@@ -1,6 +1,6 @@
 import requests
 from typing import Dict, Any
-from seq2seq.metrics.lc_quad.post_process import process
+from post_process import process
 
 
 def empty(r):

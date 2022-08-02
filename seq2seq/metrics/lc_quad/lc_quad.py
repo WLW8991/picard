@@ -82,14 +82,27 @@ class LC_QuAD(datasets.Metric):
     def _compute(self, predictions, references):
         if self.config_name == "both":
             query_match = compute_query_match_metric(predictions, references)
-            f1 = compute_f1_metric(predictions, references)
+            # if query_match > 0.3:
+            #     f1 = compute_f1_metric(predictions, references)
+            # else:
+            #     f1 = {
+            #         "precision": 0.,
+            #         "recall": 0.,
+            #         "f1": 0.
+            #     }
+            # f1 = compute_f1_metric(predictions, references)
             bleu = compute_sacrebleu_metric(predictions, references)
             acc = compute_accuracy_metric(predictions, references)
         else:
             query_match = dict()
             bleu = dict()
             acc = dict()
-            f1 = dict()
+            # f1 = dict()
 
-        return {**query_match, **bleu, **acc, **f1}
+        return {
+            **query_match, 
+            **bleu, 
+            **acc, 
+            # **f1
+            }
 

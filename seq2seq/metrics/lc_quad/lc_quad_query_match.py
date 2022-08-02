@@ -2,7 +2,7 @@
 
 import re
 from typing import Dict, Any
-from unittest import result
+from seq2seq.metrics.lc_quad.post_process import process
 
 
 def parse_triples(sparql):
@@ -33,7 +33,7 @@ def query_match_one(prediction, reference):
 def compute_query_match_metric(predictions, references) -> Dict[str, Any]:
     qm, total = 0, 0
     for prediction, reference in zip(predictions, references):
-        qm += query_match_one(prediction, reference["query"])
+        qm += query_match_one(process(prediction), process(reference["query"]))
         total += 1
     return {
         "query_match": float(qm/total),
