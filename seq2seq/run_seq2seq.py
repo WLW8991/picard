@@ -87,7 +87,7 @@ def main() -> None:
         if "MLFLOW_EXPERIMENT_ID" in os.environ:
             init_args["group"] = os.environ["MLFLOW_EXPERIMENT_ID"]
         wandb.init(
-            project=os.getenv("WANDB_PROJECT", "text-to-sparql"),
+            project=os.getenv("WANDB_PROJECT", "text-to-sql"),
             name=training_args.run_name,
             **init_args,
         )
@@ -204,11 +204,11 @@ def main() -> None:
             "target_with_db_id": data_training_args.target_with_db_id,
         }
         #using spidertrainer as it is.
-        if data_args.dataset in ["spider", "spider_realistic", "spider_syn", "spider_dk"]:
-            trainer = SpiderTrainer(**trainer_kwargs)
-        elif data_args.dataset in ["cosql", "cosql+spider"]:
-            trainer = CoSQLTrainer(**trainer_kwargs)
-        elif data_args.dataset in ["lc_quad"]:
+        # if data_args.dataset in ["spider", "spider_realistic", "spider_syn", "spider_dk"]:
+        #     trainer = SpiderTrainer(**trainer_kwargs)
+        # elif data_args.dataset in ["cosql", "cosql+spider"]:
+        #     trainer = CoSQLTrainer(**trainer_kwargs)
+        if data_args.dataset in ["lc_quad_1", "lc_quad_2"]:
             trainer = QuadTrainer(**trainer_kwargs)
         else:
             raise NotImplementedError()

@@ -5,7 +5,6 @@ from datasets.arrow_dataset import Dataset
 from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from seq2seq.utils.dataset import DataTrainingArguments, normalize#, serialize_schema
 from seq2seq.utils.trainer import Seq2SeqTrainer, EvalPrediction
-from seq2seq.metrics.lc_quad.post_process import process
 
 
 def lc_quad_get_input(
@@ -60,7 +59,7 @@ def lc_quad_pre_process_function(
     
     inputs = [
         lc_quad_get_input(question=question, prefix=prefix)
-        for question in batch["question_input"]
+        for question in batch["question_process"]
     ]
 
     model_inputs: dict = tokenizer(
@@ -82,7 +81,7 @@ def lc_quad_pre_process_function(
     #    for query in batch["sparql_dbpedia18"]
     #]
 
-    targets = [query for query in batch["sparql_wiki_process"] ]
+    targets = [query for query in batch["sparql_process"] ]
 
     # Setup the tokenizer for targets
     with tokenizer.as_target_tokenizer():
@@ -113,8 +112,8 @@ class QuadTrainer(Seq2SeqTrainer):
         decoded_label_ids = self.tokenizer.batch_decode(_label_ids, skip_special_tokens=False)
         metas = [
             {
-                "query": x["sparql_wiki_process"],
-                "question": x["question_input"],
+                "query": x["sparql_process"],
+                "question": x["question_process"],
                 "context": context.replace('<pad>','').replace('</s>','').replace('<unk>','')\
                       .replace('<s>','').strip(),
                 "label": label.replace('<pad>','').replace('</s>','').replace('<unk>','')\
@@ -125,15 +124,11 @@ class QuadTrainer(Seq2SeqTrainer):
         pred_res = self.tokenizer.batch_decode(predictions, skip_special_tokens=False)
         predictions = [item.replace('<pad>','').replace('</s>','').replace('<unk>','')\
                       .replace('<s>','').strip() for item in pred_res]
-        labels = [item.replace('<pad>','').replace('</s>','').replace('<unk>','')\
-                      .replace('<s>','').strip() for item in decoded_label_ids]
-        processed_predictions = [process(p) for p in predictions]
-        processed_labels = [process(l) for l in labels]
                       
         assert len(metas) == len(predictions)
         with open(f"{self.args.output_dir}/predictions_{stage}.json", "w") as f:
             json.dump(
-                [dict(**{"prediction": prediction}, **{"processed_predict": processed_prediction}, **{"processed_s_label": processed_label}, **meta) for prediction, processed_prediction, processed_label, meta in zip(predictions, processed_predictions, processed_labels, metas)],
+                [dict(**{"prediction": prediction}, **meta) for prediction, meta in zip(predictions, metas)],
                 f,
                 indent=4,
             )

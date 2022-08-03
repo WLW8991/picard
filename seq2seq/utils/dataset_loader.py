@@ -16,8 +16,6 @@ from seq2seq.utils.dataset import (
     _prepare_train_split,
     prepare_splits,
 )
-#from seq2seq.utils.spider import spider_add_serialized_schema, spider_pre_process_function
-#from seq2seq.utils.cosql import cosql_add_serialized_schema, cosql_pre_process_function
 from seq2seq.utils.lc_quad import lc_quad_pre_process_function
 
 logger = logging.getLogger(__name__)
@@ -43,69 +41,20 @@ def load_dataset(
     training_args: TrainingArguments,
     tokenizer: PreTrainedTokenizerFast,
 ) -> Tuple[Metric, DatasetSplits]:
-    _spider_dataset_dict: Callable[[], DatasetDict] = lambda: datasets.load.load_dataset(
-        path=data_args.dataset_paths["spider"], cache_dir=model_args.cache_dir
-    )
-    _spider_metric: Callable[[], Metric] = lambda: datasets.load.load_metric(
-        path=data_args.metric_paths["spider"], config_name=data_args.metric_config, test_suite_db_dir=data_args.test_suite_db_dir
-    )
-    #_spider_add_serialized_schema = lambda ex: spider_add_serialized_schema(
-    #    ex=ex,
-    #    data_training_args=data_training_args,
-    #)
-    _spider_pre_process_function = lambda batch, max_source_length, max_target_length: spider_pre_process_function(
-        batch=batch,
-        max_source_length=max_source_length,
-        max_target_length=max_target_length,
-        data_training_args=data_training_args,
-        tokenizer=tokenizer,
-    )
-
-    _cosql_dataset_dict: Callable[[], DatasetDict] = lambda: datasets.load.load_dataset(
-        path=data_args.dataset_paths["cosql"], cache_dir=model_args.cache_dir
-    )
-    _cosql_metric: Callable[[], Metric] = lambda: datasets.load.load_metric(
-        path=data_args.metric_paths["cosql"], config_name=data_args.metric_config, test_suite_db_dir=data_args.test_suite_db_dir
-    )
-    #_cosql_add_serialized_schema = lambda ex: cosql_add_serialized_schema(
-    #    ex=ex,
-    #    data_training_args=data_training_args,
-    #)
-    _cosql_pre_process_function = lambda batch, max_source_length, max_target_length: cosql_pre_process_function(
-        batch=batch,
-        max_source_length=max_source_length,
-        max_target_length=max_target_length,
-        data_training_args=data_training_args,
-        tokenizer=tokenizer,
-    )
-    #adding spider_realistic dataset, metric, using schema and preprocess funtions of spider as it is
-    _spider_realistic_dataset_dict : Callable[[], DatasetDict] = lambda: datasets.load.load_dataset(
-        path=data_args.dataset_paths['spider_realistic'], cache_dir=model_args.cache_dir
-    )
-    _spider_realistic_metric: Callable[[], Metric] = lambda: datasets.load.load_metric(
-        path=data_args.metric_paths["spider_realistic"], config_name=data_args.metric_config, test_suite_db_dir=data_args.test_suite_db_dir
-    )
-
-    _spider_syn_dataset_dict : Callable[[], DatasetDict] = lambda: datasets.load.load_dataset(
-        path=data_args.dataset_paths['spider_syn'], cache_dir=model_args.cache_dir
-    )
-    _spider_syn_metric: Callable[[], Metric] = lambda: datasets.load.load_metric(
-        path=data_args.metric_paths["spider_syn"], config_name=data_args.metric_config, test_suite_db_dir=data_args.test_suite_db_dir
-    )
-
-    _spider_dk_dataset_dict : Callable[[], DatasetDict] = lambda: datasets.load.load_dataset(
-        path=data_args.dataset_paths['spider_dk'], cache_dir=model_args.cache_dir
-    )
-    _spider_dk_metric: Callable[[], Metric] = lambda: datasets.load.load_metric(
-        path=data_args.metric_paths["spider_dk"], config_name=data_args.metric_config, test_suite_db_dir=data_args.test_suite_db_dir
-    )
-
+    
 # lc_quad dataset
-    _lc_quad_dataset_dict : Callable[[], DatasetDict] = lambda: datasets.load.load_dataset(
-        path=data_args.dataset_paths['lc_quad'], cache_dir=model_args.cache_dir
+    _lc_quad_1_dataset_dict : Callable[[], DatasetDict] = lambda: datasets.load.load_dataset(
+        path=data_args.dataset_paths['lc_quad_1'], cache_dir=model_args.cache_dir
     )
-    _lc_quad_metric: Callable[[], Metric] = lambda: datasets.load.load_metric(
-        path=data_args.metric_paths["lc_quad"], config_name=data_args.metric_config, test_suite_db_dir=data_args.test_suite_db_dir
+    _lc_quad_1_metric: Callable[[], Metric] = lambda: datasets.load.load_metric(
+        path=data_args.metric_paths["lc_quad_1"], config_name=data_args.metric_config, test_suite_db_dir=data_args.test_suite_db_dir
+    )
+
+    _lc_quad_2_dataset_dict : Callable[[], DatasetDict] = lambda: datasets.load.load_dataset(
+        path=data_args.dataset_paths['lc_quad_2'], cache_dir=model_args.cache_dir
+    )
+    _lc_quad_2_metric: Callable[[], Metric] = lambda: datasets.load.load_metric(
+        path=data_args.metric_paths["lc_quad_2"], config_name=data_args.metric_config, test_suite_db_dir=data_args.test_suite_db_dir
     )
 
     #_lc_quad_add_serialized_schema = lambda ex:lc_quad_add_serialized_schema(
@@ -120,105 +69,34 @@ def load_dataset(
         tokenizer=tokenizer,
     )
 
-   
-
+    #_lc_quad_add_serialized_schema = lambda ex:lc_quad_add_serialized_schema(
+    #    ex=ex,
+    #    data_training_args=data_training_args,
+    #)
 
     _prepare_splits_kwargs = {
         "data_args": data_args,
         "training_args": training_args,
         "data_training_args": data_training_args,
     }
-
-    if data_args.dataset == "spider":
-        metric = _spider_metric()
+    
+    if data_args.dataset == "lc_quad_1":
+        metric = _lc_quad_1_metric()
         dataset_splits = prepare_splits(
-            dataset_dict=_spider_dataset_dict(),
-            add_serialized_schema=_spider_add_serialized_schema,
-            pre_process_function=_spider_pre_process_function,
-            **_prepare_splits_kwargs,
-        )
-    elif data_args.dataset == "cosql":
-        metric = _cosql_metric()
-        dataset_splits = prepare_splits(
-            dataset_dict=_cosql_dataset_dict(),
-            add_serialized_schema=_cosql_add_serialized_schema,
-            pre_process_function=_cosql_pre_process_function,
-            **_prepare_splits_kwargs,
-        )
-    elif data_args.dataset == "lc_quad":
-        metric = _lc_quad_metric()
-        dataset_splits = prepare_splits(
-            dataset_dict=_lc_quad_dataset_dict(),
+            dataset_dict=_lc_quad_1_dataset_dict(),
             #add_serialized_schema=_lc_quad_add_serialized_schema,
             pre_process_function=_lc_quad_pre_process_function,
             **_prepare_splits_kwargs,
         )
-    elif data_args.dataset == "spider_realistic":
-        metric = _spider_realistic_metric()
+    elif data_args.dataset == "lc_quad_2":
+        metric = _lc_quad_2_metric()
         dataset_splits = prepare_splits(
-            dataset_dict= _spider_realistic_dataset_dict(),
-            #add_serialized_schema=_spider_add_serialized_schema,
-            pre_process_function=_spider_pre_process_function,
+            dataset_dict=_lc_quad_2_dataset_dict(),
+            #add_serialized_schema=_lc_quad_add_serialized_schema,
+            pre_process_function=_lc_quad_pre_process_function,
             **_prepare_splits_kwargs,
         )
-    elif data_args.dataset == "spider_dk":
-        metric = _spider_dk_metric()
-        dataset_splits = prepare_splits(
-            dataset_dict= _spider_dk_dataset_dict(),
-            #add_serialized_schema=_spider_add_serialized_schema,
-            pre_process_function=_spider_pre_process_function,
-            **_prepare_splits_kwargs,
-        )
-    elif data_args.dataset == "spider_syn":
-        metric = _spider_syn_metric()
-        dataset_splits = prepare_splits(
-            dataset_dict= _spider_syn_dataset_dict(),
-            #add_serialized_schema=_spider_add_serialized_schema,
-            pre_process_function=_spider_pre_process_function,
-            **_prepare_splits_kwargs,
-        )
-    elif data_args.dataset == "cosql+spider":
-        metric = _cosql_metric()
-        cosql_dataset_splits = prepare_splits(
-            dataset_dict=_cosql_dataset_dict(),
-            #add_serialized_schema=_cosql_add_serialized_schema,
-            pre_process_function=_cosql_pre_process_function,
-            **_prepare_splits_kwargs,
-        )
-        spider_training_split = (
-            _prepare_train_split(
-                dataset=_spider_dataset_dict()["train"],
-                data_training_args=data_training_args,
-                #add_serialized_schema=_spider_add_serialized_schema,
-                pre_process_function=_spider_pre_process_function,
-            )
-            if training_args.do_train
-            else None
-        )
-        if cosql_dataset_splits.train_split is None and spider_training_split is None:
-            train_split = None
-        elif cosql_dataset_splits.train_split is None:
-            train_split = spider_training_split
-        elif spider_training_split is None:
-            train_split = cosql_dataset_splits.train_split
-        else:
-            dataset: Dataset = concatenate_datasets(
-                dsets=[cosql_dataset_splits.train_split.dataset, spider_training_split.dataset]
-            )
-            train_split = TrainSplit(
-                dataset=dataset,
-                schemas={**spider_training_split.schemas, **cosql_dataset_splits.train_split.schemas},
-            )
-        schemas = {
-            **cosql_dataset_splits.schemas,
-            **(spider_training_split.schemas if spider_training_split is not None else {}),
-        }
-        dataset_splits = DatasetSplits(
-            train_split=train_split,
-            eval_split=cosql_dataset_splits.eval_split,
-            test_splits=cosql_dataset_splits.test_splits,
-            schemas=schemas,
-        )
+    
     else:
         raise NotImplementedError()
 
