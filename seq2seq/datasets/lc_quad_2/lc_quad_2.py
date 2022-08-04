@@ -68,8 +68,8 @@ class LcQuad(datasets.GeneratorBasedBuilder):
         # TODO(lc_quad): Downloads the data and defines the splits
         # dl_manager is a datasets.download.DownloadManager that can be used to
         # download and extract URLs
-        #dl_dir = dl_manager.download_and_extract(_URL)
-        dl_dir = './transform/transformers_cache/downloads'
+        dl_dir = dl_manager.download_and_extract(_URL)
+        # dl_dir = './transform/transformers_cache/downloads'
         dl_dir = os.path.join(dl_dir, "LC-QuAD2.0-master", "dataset")
         return [
             datasets.SplitGenerator(
