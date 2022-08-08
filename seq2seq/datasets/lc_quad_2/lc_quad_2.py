@@ -26,7 +26,8 @@ organization={Springer}
 _DESCRIPTION = """\
 LC-QuAD 2.0 is a Large Question Answering dataset with 30,000 pairs of question and its corresponding SPARQL query. The target knowledge base is Wikidata and DBpedia, specifically the 2018 version. Please see our paper for details about the dataset creation process and framework.
 """
-_URL = "https://github.com/AskNowQA/LC-QuAD2.0/archive/master.zip"
+# _URL = "https://github.com/AskNowQA/LC-QuAD2.0/archive/master.zip"
+_URL = "../../../dataset_files/lc_quad_2/master.zip"
 
 
 class LcQuad(datasets.GeneratorBasedBuilder):
