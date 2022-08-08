@@ -4,6 +4,7 @@ from datasets.dataset_dict import DatasetDict
 from datasets.arrow_dataset import Dataset
 from transformers.training_args import TrainingArguments
 from seq2seq.utils.bridge_content_encoder import get_database_matches
+from seq2seq.relation_infusion.choose_dataset import preprocess_by_dataset
 import re
 import random
 
@@ -125,6 +126,9 @@ class DataTrainingArguments:
         default=True,
         metadata={"help": "Whether or not to add the database id to the target. Needed for Picard."},
     )
+    use_relation : bool = field(
+        default=True,
+        metadata={"help": "Whether to use realtions."})
 
     def __post_init__(self):
         if self.val_max_target_length is None:
@@ -138,11 +142,6 @@ class DataArguments:
     )
     dataset_paths: Dict[str, str] = field(
         default_factory=lambda: {
-            # "spider": "./seq2seq/datasets/spider",
-            # "cosql": "./seq2seq/datasets/cosql",
-            # "spider_realistic": "./seq2seq/datasets/spider_realistic",
-            # "spider_syn": "./seq2seq/datasets/spider_syn",
-            # "spider_dk": "./seq2seq/datasets/spider_dk",
             "lc_quad_1": "./seq2seq/datasets/lc_quad_1",
             "lc_quad_2": "./seq2seq/datasets/lc_quad_2",
 
@@ -156,11 +155,6 @@ class DataArguments:
     #we are referencing spider_realistic to spider metrics only as both use the main spider dataset as base.
     metric_paths: Dict[str, str] = field(
         default_factory=lambda: {
-            # "spider": "./seq2seq/metrics/spider",
-            # "spider_realistic" : "./seq2seq/metrics/spider",
-            # "cosql": "./seq2seq/metrics/cosql",
-            # "spider_syn":"./seq2seq/metrics/spider",
-            # "spider_dk":"./seq2seq/metrics/spider",
             "lc_quad_1":"./seq2seq/metrics/lc_quad_1",
             "lc_quad_2":"./seq2seq/metrics/lc_quad_2",
         },
@@ -177,6 +171,12 @@ class DataArguments:
         default=None,
         metadata={"help": "Sections from the data config to use for testing"}
     )
+    data_base_dir : Optional[str] = field(
+        default="./dataset_files/",
+        metadata={"help": "Base path to the lge relation dataset."})
+    split_dataset : Optional[str] = field(
+        default="",
+        metadata={"help": "The dataset name after spliting."})
 
 
 @dataclass
@@ -200,22 +200,9 @@ class DatasetSplits(object):
     #schemas: Dict[str, dict]
 
 
-#def _get_schemas(examples: Dataset) -> Dict[str, dict]:
-#    schemas: Dict[str, dict] = dict()
-#    for ex in examples:
-#        if ex["db_id"] not in schemas:
-#            schemas[ex["db_id"]] = {
-#                "db_table_names": ex["db_table_names"],
-#                "db_column_names": ex["db_column_names"],
-#                "db_column_types": ex["db_column_types"],
-#                "db_primary_keys": ex["db_primary_keys"],
-#                "db_foreign_keys": ex["db_foreign_keys"],
-#            }
-#    return schemas
-
-
 def _prepare_train_split(
     dataset: Dataset,
+    data_args: DataArguments,
     data_training_args: DataTrainingArguments,
     #add_serialized_schema: Callable[[dict], dict],
     pre_process_function: Callable[[dict, Optional[int], Optional[int]], dict],
@@ -241,11 +228,27 @@ def _prepare_train_split(
         #remove_columns=column_names,
         load_from_cache_file=not data_training_args.overwrite_cache,
     )
+
+    train_input_ids = [dataset[i]['input_ids'] for i in range(len(dataset))]
+
+    relation_matrix_l = preprocess_by_dataset(
+        data_args.data_base_dir, 
+        data_args.split_dataset, 
+        train_input_ids, 
+        "train" 
+        )
+
+    def add_relation_info_train(example, idx, relation_matrix_l=relation_matrix_l):
+        example['relations'] = relation_matrix_l[idx]  
+        return example
+    dataset = dataset.map(add_relation_info_train, with_indices=True)
+
     return TrainSplit(dataset=dataset)#, schemas=schemas)
 
 
 def _prepare_eval_split(
     dataset: Dataset,
+    data_args: DataArguments,
     data_training_args: DataTrainingArguments,
     #add_serialized_schema: Callable[[dict], dict],
     pre_process_function: Callable[[dict, Optional[int], Optional[int]], dict],
@@ -274,6 +277,21 @@ def _prepare_eval_split(
         #remove_columns=column_names,
         load_from_cache_file=not data_training_args.overwrite_cache,
     )
+
+    dev_input_ids = [eval_dataset[i]['input_ids'] for i in range(len(eval_dataset))]
+    
+    relation_matrix_l = preprocess_by_dataset(
+        data_args.data_base_dir, 
+        data_args.split_dataset, 
+        dev_input_ids, 
+        "dev" 
+        )
+
+    def add_relation_info_train(example, idx, relation_matrix_l=relation_matrix_l):
+        example['relations'] = relation_matrix_l[idx]  
+        return example
+    eval_dataset = eval_dataset.map(add_relation_info_train, with_indices=True)
+
     return EvalSplit(dataset=eval_dataset, examples=eval_examples)#, schemas=schemas)
 
 
@@ -290,6 +308,7 @@ def prepare_splits(
     if training_args.do_train:
         train_split = _prepare_train_split(
             dataset_dict["train"],
+            data_args = data_args,
             data_training_args=data_training_args,
             #add_serialized_schema=add_serialized_schema,
             pre_process_function=pre_process_function,
@@ -298,6 +317,7 @@ def prepare_splits(
     if training_args.do_eval:
         eval_split = _prepare_eval_split(
             dataset_dict["test"],
+            data_args = data_args,
             data_training_args=data_training_args,
             #add_serialized_schema=add_serialized_schema,
             pre_process_function=pre_process_function,
@@ -313,15 +333,6 @@ def prepare_splits(
             )
             for section in data_args.test_sections
         }
-        #test_split_schemas = {}
-        #for split in test_splits.values():
-        #    test_split_schemas.update(split.schemas)
-
-    #schemas = {
-    #    **(train_split.schemas if train_split is not None else {}),
-    #    **(eval_split.schemas if eval_split is not None else {}),
-    #    **(test_split_schemas if test_splits is not None else {}),
-    #}
 
     return DatasetSplits(
         train_split=train_split, 
@@ -345,78 +356,3 @@ def normalize(query: str) -> str:
         return re.sub(r"\b(?<!['\"])(\w+)(?!['\"])\b", lambda match: match.group(1).lower(), s)
 
     return comma_fix(white_space_fix(lower(query)))
-
-
-#def serialize_schema(
-#    question: str,
-#    db_path: str,
-#    db_id: str,
-#    db_column_names: Dict[str, str],
-#    db_table_names: List[str],
-#    schema_serialization_type: str = "peteshaw",
-#    schema_serialization_randomized: bool = False,
-#    schema_serialization_with_db_id: bool = True,
-#    schema_serialization_with_db_content: bool = False,
-#    normalize_query: bool = True,
-#) -> str:
-#    if schema_serialization_type == "verbose":
-#        db_id_str = "Database: {db_id}. "
-#        table_sep = ". "
-#        table_str = "Table: {table}. Columns: {columns}"
-#        column_sep = ", "
-#        column_str_with_values = "{column} ({values})"
-#        column_str_without_values = "{column}"
-#        value_sep = ", "
-#    elif schema_serialization_type == "peteshaw":
-#        # see https://github.com/google-research/language/blob/master/language/nqg/tasks/spider/append_schema.py#L42
-#        db_id_str = " | {db_id}"
-#        table_sep = ""
-#        table_str = " | {table} : {columns}"
-#        column_sep = " , "
-#        column_str_with_values = "{column} ( {values} )"
-#        column_str_without_values = "{column}"
-#        value_sep = " , "
-#    else:
-#        raise NotImplementedError#
-#
-#    def get_column_str(table_name: str, column_name: str) -> str:
-#        column_name_str = column_name.lower() if normalize_query else column_name
-#        if schema_serialization_with_db_content:
-#            matches = get_database_matches(
-#                question=question,
-#                table_name=table_name,
-#                column_name=column_name,
-#                db_path=(db_path + "/" + db_id + "/" + db_id + ".sqlite"),
-#            )
-#            if matches:
-#                return column_str_with_values.format(column=column_name_str, values=value_sep.join(matches))
-#            else:
-#                return column_str_without_values.format(column=column_name_str)
-#        else:
-#            return column_str_without_values.format(column=column_name_str)
-#
-#    tables = [
-#        table_str.format(
-#            table=table_name.lower() if normalize_query else table_name,
-#            columns=column_sep.join(
-#                map(
-#                    lambda y: get_column_str(table_name=table_name, column_name=y[1]),
-#                    filter(
-#                        lambda y: y[0] == table_id,
-#                        zip(
-#                            db_column_names["table_id"],
-#                            db_column_names["column_name"],
-#                        ),
-#                    ),
-#                )
-#            ),
-#        )
-#        for table_id, table_name in enumerate(db_table_names)
-#    ]
-#    if schema_serialization_randomized:
-#        random.shuffle(tables)
-#    if schema_serialization_with_db_id:
-#        serialized_schema = db_id_str.format(db_id=db_id) + table_sep.join(tables)
-#    else:
-#        serialized_schema = table_sep.join(tables)
-#    return serialized_schema

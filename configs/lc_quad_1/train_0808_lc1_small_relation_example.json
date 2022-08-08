@@ -1,19 +1,19 @@
 {
-    "run_name": "train_0808_lc1_small_relation",
+    "run_name": "train_0803_lc1_small",
     "model_name_or_path": "t5-small",
     "dataset": "lc_quad_1",
     "source_prefix": "",
     "normalize_query": true,
-    "output_dir": "./train/train_0808_lc1_small_relation",
+    "output_dir": "./train/train_0803_lc1_small",
     "cache_dir": "./transformers_cache",
     "overwrite_output_dir": true,
     "do_train": true,
     "do_eval": true,
     "fp16": false,
     "num_train_epochs": 1024,
-    "per_device_train_batch_size": 2,
-    "per_device_eval_batch_size": 2,
-    "gradient_accumulation_steps": 1000,
+    "per_device_train_batch_size": 100,
+    "per_device_eval_batch_size": 100,
+    "gradient_accumulation_steps": 20,
     "label_smoothing_factor": 0.0,
     "learning_rate": 1e-4,
     "adafactor": true,
@@ -34,6 +34,5 @@
     "save_steps": 64,
     "evaluation_strategy": "steps",
     "eval_steps": 64,
-    "predict_with_generate": true,
-    "gradient_checkpointing": true
+    "predict_with_generate": true
 }

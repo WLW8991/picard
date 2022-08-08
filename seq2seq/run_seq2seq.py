@@ -26,7 +26,7 @@ from dataclasses import asdict, fields
 from transformers.hf_argparser import HfArgumentParser
 from transformers.training_args_seq2seq import Seq2SeqTrainingArguments
 from transformers.models.auto import AutoConfig, AutoTokenizer, AutoModelForSeq2SeqLM
-from transformers.data.data_collator import DataCollatorForSeq2Seq
+# from transformers.data.data_collator import DataCollatorForSeq2Seq
 from transformers.trainer_utils import get_last_checkpoint, set_seed
 from transformers.models.t5.modeling_t5 import T5ForConditionalGeneration
 from transformers.models.t5.tokenization_t5_fast import T5TokenizerFast
@@ -36,9 +36,10 @@ from seq2seq.utils.args import ModelArguments
 from seq2seq.utils.picard_model_wrapper import PicardArguments, PicardLauncher, with_picard
 from seq2seq.utils.dataset import DataTrainingArguments, DataArguments
 from seq2seq.utils.dataset_loader import load_dataset
-#from seq2seq.utils.spider import SpiderTrainer
-#from seq2seq.utils.cosql import CoSQLTrainer
 from seq2seq.utils.lc_quad import QuadTrainer
+
+from model.model_utils import get_relation_t5_model
+from seq2seq.utils.relation_data_collator import DataCollatorForSeq2Seq
 
 
 def main() -> None:
@@ -135,6 +136,10 @@ def main() -> None:
         use_cache=not training_args.gradient_checkpointing,
     )
 
+    # Add relation
+    num_relations = 1
+    config.num_relations = num_relations
+
     # Initialize tokenizer
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
@@ -167,17 +172,33 @@ def main() -> None:
         else:
             model_cls_wrapper = lambda model_cls: model_cls
 
-        # Initialize model
-        model = model_cls_wrapper(AutoModelForSeq2SeqLM).from_pretrained(
-            model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
-            config=config,
-            cache_dir=model_args.cache_dir,
-            revision=model_args.model_revision,
-            use_auth_token=True if model_args.use_auth_token else None,
-        )
-        if isinstance(model, T5ForConditionalGeneration):
-            model.resize_token_embeddings(len(tokenizer))
+        if data_training_args.use_relation is True:
+            print("Use relation model.")
+            model = get_relation_t5_model(config=config, model_name_or_path=model_args.model_name_or_path)
+        else:
+            print("Use original model.")
+            model = model_cls_wrapper(AutoModelForSeq2SeqLM).from_pretrained(
+                model_args.model_name_or_path,
+                from_tf=bool(".ckpt" in model_args.model_name_or_path),
+                config=config,
+                cache_dir=model_args.cache_dir,
+                revision=model_args.model_revision,
+                use_auth_token=True if model_args.use_auth_token else None,
+            )
+
+        model.resize_token_embeddings(len(tokenizer))
+
+        # # Initialize model
+        # model = model_cls_wrapper(AutoModelForSeq2SeqLM).from_pretrained(
+        #     model_args.model_name_or_path,
+        #     from_tf=bool(".ckpt" in model_args.model_name_or_path),
+        #     config=config,
+        #     cache_dir=model_args.cache_dir,
+        #     revision=model_args.model_revision,
+        #     use_auth_token=True if model_args.use_auth_token else None,
+        # )
+        # if isinstance(model, T5ForConditionalGeneration):
+        #     model.resize_token_embeddings(len(tokenizer))
 
         if training_args.label_smoothing_factor > 0 and not hasattr(model, "prepare_decoder_input_ids_from_labels"):
             logger.warning(
