@@ -149,9 +149,9 @@ def main() -> None:
         use_auth_token=True if model_args.use_auth_token else None,
     )
     assert isinstance(tokenizer, PreTrainedTokenizerFast), "Only fast tokenizers are currently supported"
-    if isinstance(tokenizer, T5TokenizerFast):
-        # In T5 `<` is OOV, see https://github.com/google-research/language/blob/master/language/nqg/tasks/spider/restore_oov.py
-        tokenizer.add_tokens([AddedToken(" <="), AddedToken(" <")])
+    # if isinstance(tokenizer, T5TokenizerFast):
+    #     # In T5 `<` is OOV, see https://github.com/google-research/language/blob/master/language/nqg/tasks/spider/restore_oov.py
+    #     tokenizer.add_tokens([AddedToken(" <="), AddedToken(" <")])
 
     # Load dataset
     metric, dataset_splits = load_dataset(
@@ -186,7 +186,7 @@ def main() -> None:
                 use_auth_token=True if model_args.use_auth_token else None,
             )
 
-        model.resize_token_embeddings(len(tokenizer))
+        # model.resize_token_embeddings(len(tokenizer))
 
         # # Initialize model
         # model = model_cls_wrapper(AutoModelForSeq2SeqLM).from_pretrained(
