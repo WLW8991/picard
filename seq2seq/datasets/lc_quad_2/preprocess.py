@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import stanza
 
 class Preprocess(object):
     def __init__(self):
@@ -26,14 +27,17 @@ class Preprocess(object):
         self.ent_labels = ent_labels
         self.rel_labels = rel_labels
         self.vocab_dict = vocab_dict
+        
+        self.nlp_tokenize = stanza.Pipeline('en', processors='tokenize,mwt,pos,lemma,depparse', 
+                                    tokenize_pretokenized = False, use_gpu=True)
 
     
     def _preprocess(self, data):
         wikisparql = data['sparql_wikidata']
-        question = data['question']
-        if question is None:
-            question = data['NNQT_question']
-        question = question.replace('}','').replace('{','')
+        raw_question = data['question']
+        if raw_question is None:
+            raw_question = data['NNQT_question']
+        raw_question = raw_question.replace('}','').replace('{','')
 
         sparql = wikisparql.replace('(',' ( ').replace(')',' ) ').replace('{',' { ')\
         .replace('}',' } ').replace(':',': ').replace(',',' , ').replace("'"," ' ")\
@@ -80,6 +84,12 @@ class Preprocess(object):
         
         gold_query = ' '.join(split).strip()
         
+        
+        doc = self.nlp_tokenize(raw_question)
+        question_toks = [w.text for s in doc.sentences for w in s.words]
+        question = ' '.join(question_toks)
+        tail = ''
+        
         for rel in _ents:
             rel=rel.replace('wd:',self.vocab_dict['wd:']+' ')
             rel=rel.replace('wdt:',self.vocab_dict['wdt:']+' ')
@@ -87,6 +97,14 @@ class Preprocess(object):
             rel=rel.replace('ps:',self.vocab_dict['ps:']+' ')
             rel=rel.replace('pq:',self.vocab_dict['pq:']+' ')
             question = question + ' ' + self.vocab_dict['[DEF]'] + ' ' + rel
+            tail = tail + ' ' + self.vocab_dict['[DEF]'] + ' ' + rel
         question_input = ' '.join(question.split()).strip()
+        schema = ' '.join(tail.split()).strip()
+        
+        res = {'sparql_process': gold_query,
+               'question_process': question_input,
+               'question_toks': question_toks,
+               'schema': schema,
+               'raw_question': raw_question,}
 
-        return gold_query, question_input
+        return res

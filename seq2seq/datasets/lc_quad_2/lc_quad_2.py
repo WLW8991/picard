@@ -26,8 +26,7 @@ organization={Springer}
 _DESCRIPTION = """\
 LC-QuAD 2.0 is a Large Question Answering dataset with 30,000 pairs of question and its corresponding SPARQL query. The target knowledge base is Wikidata and DBpedia, specifically the 2018 version. Please see our paper for details about the dataset creation process and framework.
 """
-# _URL = "https://github.com/AskNowQA/LC-QuAD2.0/archive/master.zip"
-_URL = "../../../dataset_files/lc_quad_2/master.zip"
+_URL = "https://github.com/AskNowQA/LC-QuAD2.0/archive/master.zip"
 
 
 class LcQuad(datasets.GeneratorBasedBuilder):
@@ -45,14 +44,15 @@ class LcQuad(datasets.GeneratorBasedBuilder):
             features=datasets.Features(
                 {
                     "NNQT_question": datasets.Value("string"),
-                    "uid": datasets.Value("int32"),
+                    #"uid": datasets.Value("int32"),
                     "question": datasets.Value("string"),
+                    "raw_question": datasets.Value("string"),
                     "sparql_wikidata": datasets.Value("string"),
                     "question_process": datasets.Value("string"),
                     "sparql_process": datasets.Value("string"),
-                    "sparql_dbpedia18": datasets.Value("string"),
-                    #"paraphrased_question": datasets.Value("string")
-                    # These are the features of your dataset like images, labels ...
+                    #"sparql_dbpedia18": datasets.Value("string"),
+                    "question_toks": datasets.Value("string"),
+                    "schema": datasets.Value("string"),
                 }
             ),
             # If there's a common (input, target) tuple from the features,
@@ -70,7 +70,7 @@ class LcQuad(datasets.GeneratorBasedBuilder):
         # dl_manager is a datasets.download.DownloadManager that can be used to
         # download and extract URLs
         dl_dir = dl_manager.download_and_extract(_URL)
-        # dl_dir = './transform/transformers_cache/downloads'
+        #dl_dir = './transform/transformers_cache/downloads'
         dl_dir = os.path.join(dl_dir, "LC-QuAD2.0-master", "dataset")
         return [
             datasets.SplitGenerator(
@@ -93,20 +93,17 @@ class LcQuad(datasets.GeneratorBasedBuilder):
             pre = Preprocess()
 
             for id_, row in enumerate(data):
-                #is_list = False
-                #for key in row:
-                #    if key != "answer" and isinstance(row[key], list):
-                #        is_list = True
-                #if is_list:
-                 #   continue
-                gold_query, question_input = pre._preprocess(row)
+                processed_res = pre._preprocess(row)
+                #print(processed_res)
                 yield id_, {
                     "NNQT_question": row["NNQT_question"],
-                    "uid": row["uid"],
-                    "question": row["question"],
+                    #"uid": row["uid"],
+                    "question": row['question'],
                     "sparql_wikidata": row["sparql_wikidata"],
-                    "question_process": question_input,
-                    "sparql_process": gold_query,
-                    "sparql_dbpedia18": row["sparql_dbpedia18"],
-                    #"paraphrased_question": row["paraphrased_question"],
+                    "raw_question":processed_res['raw_question'],
+                    "question_process": processed_res["question_process"],
+                    "sparql_process":  processed_res["sparql_process"],
+                    #"sparql_dbpedia18": row["sparql_dbpedia18"],
+                    "question_toks": processed_res["question_toks"],
+                    "schema":  processed_res["schema"],
                 }
