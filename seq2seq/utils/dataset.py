@@ -1,12 +1,14 @@
+import re
+import random
+import pickle
 from typing import Optional, List, Dict, Callable
 from dataclasses import dataclass, field
 from datasets.dataset_dict import DatasetDict
 from datasets.arrow_dataset import Dataset
 from transformers.training_args import TrainingArguments
 from seq2seq.utils.bridge_content_encoder import get_database_matches
+from seq2seq.relation_infusion.get_relation_mat import Relation_Id
 from seq2seq.relation_infusion.choose_dataset import preprocess_by_dataset
-import re
-import random
 
 
 @dataclass
@@ -200,6 +202,8 @@ class DatasetSplits(object):
     #schemas: Dict[str, dict]
 
 
+rel2id = Relation_Id()
+
 def _prepare_train_split(
     dataset: Dataset,
     data_args: DataArguments,
@@ -228,15 +232,20 @@ def _prepare_train_split(
         #remove_columns=column_names,
         load_from_cache_file=not data_training_args.overwrite_cache,
     )
+    
+    # train_input_ids = [dataset[i]['input_ids'] for i in range(len(dataset))]
+    # relation_matrix_l = preprocess_by_dataset(
+    #      data_args.data_base_dir, 
+    #      data_args.split_dataset, 
+    #      train_input_ids, 
+    #      "train" 
+    #      )
 
-    train_input_ids = [dataset[i]['input_ids'] for i in range(len(dataset))]
+    #relation_matrix_l = [rel2id.get_relation_id(data) for data in dataset]
+    relation_matrix_l = pickle.load(open('./seq2seq/relation_infusion/train_relation.pkl', 'rb'))
 
-    relation_matrix_l = preprocess_by_dataset(
-        data_args.data_base_dir, 
-        data_args.split_dataset, 
-        train_input_ids, 
-        "train" 
-        )
+    # print('successfully save train relation')
+
 
     def add_relation_info_train(example, idx, relation_matrix_l=relation_matrix_l):
         example['relations'] = relation_matrix_l[idx]  
@@ -277,15 +286,17 @@ def _prepare_eval_split(
         #remove_columns=column_names,
         load_from_cache_file=not data_training_args.overwrite_cache,
     )
-
-    dev_input_ids = [eval_dataset[i]['input_ids'] for i in range(len(eval_dataset))]
     
-    relation_matrix_l = preprocess_by_dataset(
-        data_args.data_base_dir, 
-        data_args.split_dataset, 
-        dev_input_ids, 
-        "dev" 
-        )
+    # dev_input_ids = [eval_dataset[i]['input_ids'] for i in range(len(eval_dataset))]
+    # relation_matrix_l = preprocess_by_dataset(
+    #      data_args.data_base_dir, 
+    #      data_args.split_dataset, 
+    #      dev_input_ids, 
+    #      "dev" 
+    #      )
+
+    #relation_matrix_l = [rel2id.get_relation_id(data) for data in eval_dataset]
+    relation_matrix_l = pickle.load(open('./seq2seq/relation_infusion/dev_relation.pkl', 'rb'))
 
     def add_relation_info_train(example, idx, relation_matrix_l=relation_matrix_l):
         example['relations'] = relation_matrix_l[idx]  
