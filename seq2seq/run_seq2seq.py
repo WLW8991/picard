@@ -137,7 +137,7 @@ def main() -> None:
     )
 
     # Add relation
-    num_relations = 1
+    num_relations = 35
     config.num_relations = num_relations
 
     # Initialize tokenizer
